@@ -1,0 +1,84 @@
+name: Release Windows alpha
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Verify release tag
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_name }}" -ne "v0.0.1-alpha") {
+            throw "Expected release tag v0.0.1-alpha, got ${{ github.ref_name }}"
+          }
+
+      - name: Install project and build tools
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Test
+        run: python -m pytest -q
+
+      - name: Build Python packages
+        run: python -m build --sdist --wheel
+
+      - name: Build portable application
+        working-directory: packaging
+        run: pyinstaller --noconfirm --clean --distpath ..\dist --workpath ..\build bitsbots.spec
+
+      - name: Create portable ZIP
+        shell: pwsh
+        run: Compress-Archive -Path dist\BitsBots -DestinationPath dist\BitsBots-0.0.1-alpha-Windows-Portable.zip
+
+      - name: Install NSIS
+        run: choco install nsis --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force installer | Out-Null
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" packaging\bitsbots.nsi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BitsBots-0.0.1-alpha-Windows
+          if-no-files-found: error
+          path: |
+            installer\BitsBots-0.0.1-alpha-Windows-Setup.exe
+            dist\BitsBots-0.0.1-alpha-Windows-Portable.zip
+            dist\bitsbots-0.0.1a0-py3-none-any.whl
+            dist\bitsbots-0.0.1a0.tar.gz
+
+      - name: Publish GitHub prerelease
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            installer\BitsBots-0.0.1-alpha-Windows-Setup.exe
+            dist\BitsBots-0.0.1-alpha-Windows-Portable.zip
+            dist\bitsbots-0.0.1a0-py3-none-any.whl
+            dist\bitsbots-0.0.1a0.tar.gz

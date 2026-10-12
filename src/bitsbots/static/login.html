@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · BitsBots</title>
+  <link rel="icon" type="image/png" href="/static/bitsbots-logo.png">
+  <link rel="stylesheet" href="/static/login.css">
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-intro">
+      <div class="brand"><img src="/static/bitsbots-logo.png" alt="BitsBots logo"><strong>Bits <b>Bots</b></strong></div>
+      <p class="eyebrow">LOCAL-FIRST MARKET INTELLIGENCE</p>
+      <h1>See the setup<br>before the crowd.</h1>
+      <p>Multi-timeframe scanning, explainable signals, and risk-aware paper execution—all on your PC.</p>
+      <div class="features">
+        <div><b>01</b><span>Private local account</span></div>
+        <div><b>02</b><span>NonKYC market scanner</span></div>
+        <div><b>03</b><span>Paper trading only</span></div>
+      </div>
+    </section>
+    <section class="auth-card">
+      <p class="eyebrow" id="modeLabel">WELCOME BACK</p>
+      <h2 id="title">Sign in</h2>
+      <p class="muted" id="subtitle">Access your private trading workspace.</p>
+      <form id="authForm">
+        <label id="nameField">Display name<input id="displayName" autocomplete="name" maxlength="80"></label>
+        <label>Email<input id="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" maxlength="1024" required></label>
+        <p class="hint" id="passwordHint">Use at least 12 characters.</p>
+        <button class="primary" type="submit" id="submitButton">Sign in</button>
+        <p id="error" class="error"></p>
+      </form>
+      <button class="switch" id="switchMode">Create a local account</button>
+      <p class="privacy">Credentials are hashed and stored on this PC. Exchange API keys are not required.</p>
+    </section>
+  </main>
+  <script src="/static/login.js"></script>
+</body>
+</html>

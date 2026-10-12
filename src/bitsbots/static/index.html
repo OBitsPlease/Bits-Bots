@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BitsBots Market Scanner</title>
+  <link rel="icon" type="image/png" href="/static/bitsbots-logo.png">
+  <link rel="stylesheet" href="/static/styles.css?v=20261002-1">
+</head>
+<body>
+  <nav>
+    <div class="brand"><img class="brand-logo" src="/static/bitsbots-logo.png" alt="BitsBots logo"><div><strong>Bits <b>Bots</b></strong><small>AI Market Scanner</small></div></div>
+    <div class="nav-links">
+      <button class="nav-active" data-view="dashboard">Dashboard</button><button data-view="strategies">Strategies</button>
+      <button data-view="bots">Paper Bots</button>
+      <button data-view="portfolio">Portfolio</button>
+      <button data-view="backtesting">Backtesting</button><button data-view="settings">Settings</button>
+      <button data-view="assistant">Market Assistant</button>
+      <button data-view="live" class="nav-live">Live Trading</button>
+    </div>
+    <div class="nav-actions">
+      <button id="notify" title="Enable browser alerts">◉</button>
+      <span class="paper-pill" id="modePill">READ-ONLY · NONKYC</span>
+      <button id="profileName" class="profile-name">Account</button>
+      <button id="logout" title="Sign out">↪</button>
+    </div>
+  </nav>
+
+  <main id="view-dashboard" class="app-view dashboard">
+    <section class="panel live-account-hero-panel" id="liveAccountMiniPanel">
+      <div class="panel-title"><span>YOUR LIVE GRID BOTS — NONKYC</span>
+        <button type="button" id="viewLiveAccountDetails" class="linklike" data-help="Open the full grid bot view with charts and per-market breakdown in Portfolio.">Full details &amp; PnL chart ›</button></div>
+      <div id="liveAccountMiniBody"><p class="muted">Connect your NonKYC API key in Settings to see your real grid bots here.</p></div>
+    </section>
+
+    <div class="dashboard-columns">
+    <aside class="left-rail">
+      <section class="panel active-panel">
+        <div class="panel-title"><span>ACTIVE BOTS</span><button type="button" id="dashManageBots" class="linklike" data-help="Create, start, pause, and stop BitsBots grid bots in Live Trading.">Manage ›</button></div>
+        <div class="bot-list">
+          <div class="bot-group-label">BITSBOTS GRID BOTS · DRY RUN &amp; LIVE</div>
+          <div id="dashGridBots"></div>
+          <div class="bot-group-label">NATIVE NONKYC GRID BOTS</div>
+          <div id="activeBots"></div>
+        </div>
+      </section>
+      <section class="panel activity-panel">
+        <div class="panel-title"><span>RECENT ACTIVITY LOG</span></div>
+        <div id="alerts" class="feed"></div>
+        <div id="errors" class="errors"></div>
+      </section>
+    </aside>
+
+    <section class="center-stage">
+      <section class="panel chart-panel">
+        <div class="chart-toolbar">
+          <div class="market-picker">
+            <input id="marketSearch" type="search" placeholder="Search markets" autocomplete="off" aria-label="Search NonKYC markets">
+            <select id="marketSelect" aria-label="Selected market"></select>
+          </div>
+          <div class="time-buttons">
+            <button data-period="15">15m</button><button class="selected" data-period="60">1h</button>
+            <button data-period="240">4h</button><button data-period="1440">1d</button>
+          </div>
+          <span id="status" class="status">Starting</span>
+          <button id="scan" class="primary">Run scan</button>
+        </div>
+        <div class="chart-heading">
+          <div><strong id="chartSymbol">Market chart</strong><span id="chartPrice"></span></div>
+          <div><small class="chart-help">Wheel: zoom · Drag: pan · Double-click: reset</small><span id="chartSignal" class="badge watch">WAITING</span></div>
+        </div>
+        <div class="indicator-controls" aria-label="Chart indicators">
+          <button class="active" data-indicator="ema">EMA 20</button>
+          <button class="active" data-indicator="bands">Bollinger</button>
+          <button class="active" data-indicator="volume">Volume</button>
+          <button class="active" data-indicator="rsi">RSI</button>
+          <button class="active" data-indicator="macd">MACD</button>
+          <span id="indicatorLegend">Move over the chart for candle details</span>
+        </div>
+        <div class="chart-stack">
+          <div class="price-chart-wrap">
+            <canvas id="marketChart"></canvas>
+            <div id="chartTooltip" class="chart-tooltip" hidden></div>
+          </div>
+          <div class="indicator-panel" data-panel="volume">
+            <span>VOLUME</span><canvas id="volumeChart"></canvas>
+          </div>
+          <div class="indicator-panel" data-panel="rsi">
+            <span>RSI 14</span><canvas id="rsiChart"></canvas>
+          </div>
+          <div class="indicator-panel" data-panel="macd">
+            <span>MACD 12, 26, 9</span><canvas id="macdChart"></canvas>
+          </div>
+        </div>
+        <div id="detail" class="signal-detail">
+          <p class="muted">Select a ranked market to inspect its setup.</p>
+        </div>
+      </section>
+
+      <section class="panel grid-activity-panel hidden" id="gridActivityPanel" aria-live="polite">
+        <div class="panel-title"><span id="gridActivityTitle">BOT ACTIVITY</span>
+          <button type="button" id="gridActivityClose" class="linklike" data-help="Hide this bot's activity and remove its lines from the chart. The bot keeps running.">Hide ×</button></div>
+        <div id="gridActivityStats" class="grid-activity-stats"></div>
+        <div class="grid-activity-columns">
+          <div>
+            <h4>Fills <small class="muted">(newest first)</small></h4>
+            <div class="table-wrap grid-activity-table"><table>
+              <thead><tr><th>Time</th><th>Side</th><th>Price</th><th>Qty</th><th>Value</th><th>Order</th></tr></thead>
+              <tbody id="gridActivityFills"></tbody>
+            </table></div>
+          </div>
+          <div>
+            <h4>Open orders</h4>
+            <div id="gridActivityOpen" class="grid-activity-open"></div>
+            <h4>What the bot is doing</h4>
+            <ul id="gridActivityEvents" class="bot-events"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel positions-panel">
+        <div class="panel-title"><span>OPEN POSITIONS</span><span id="positionCount">0 PAPER TRADES</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Pair</th><th>Entry Price</th><th>Current Price</th><th>P&amp;L</th><th>Status</th></tr></thead>
+            <tbody id="positions"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel radar-panel">
+        <div class="panel-title"><span>OPPORTUNITY RADAR</span><span>RANKED BY MULTI-TIMEFRAME SCORE</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Market</th><th>Score</th><th>Price</th><th>Daily Regime</th><th>Signal</th></tr></thead>
+            <tbody id="signals"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <aside class="right-rail">
+      <section class="panel quick-actions">
+        <div class="panel-title"><span>QUICK ACTIONS</span></div>
+        <button id="quickNewBot">＋ New Paper Bot</button>
+        <button id="quickScan" class="primary">◎ Run Market Scan</button>
+        <button id="quickAlerts">＋ Enable Alerts</button>
+        <button id="quickActionsLiveLocked">↗ Live Trading</button>
+      </section>
+      <section class="panel microstructure-panel">
+        <div class="panel-title">
+          <span>YOUR ORDERS &amp; FILLS · NONKYC</span>
+        </div>
+        <div class="book-summary">
+          <div><span>OPEN ORDERS</span><strong id="myOpenOrdersCount">—</strong></div>
+          <div><span>RECENT FILLS</span><strong id="myRecentFillsCount">—</strong></div>
+        </div>
+        <div class="book-head"><span>Side / Market</span><span>Price</span><span>Qty</span></div>
+        <div id="myOpenOrders" class="book-side asks"></div>
+        <div id="myOrdersDivider" class="mid-price">Recent fills</div>
+        <div id="myRecentFills" class="book-side bids"></div>
+      </section>
+      <section class="panel trades-panel">
+        <div class="panel-title"><span>MARKET TRADES <b id="bookSymbol"></b></span><span id="streamStatus" class="stream-status">CONNECTING</span></div>
+        <div class="trade-head"><span>Time</span><span>Price</span><span>Amount</span></div>
+        <div id="liveTrades" class="live-trades"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-title"><span>MARKET SNAPSHOT</span></div>
+        <div id="snapshot" class="snapshot"></div>
+      </section>
+      <section class="panel performance">
+        <div class="panel-title"><span>PAPER PERFORMANCE OVERVIEW</span></div>
+        <div id="metrics"></div>
+        <canvas id="equityChart"></canvas>
+        <div class="risk-note"><strong>Research mode</strong><span>Signals are probabilistic filters, not predictions.</span></div>
+      </section>
+    </aside>
+    </div>
+  </main>
+
+  <main id="view-strategies" class="app-view workspace-page hidden">
+    <div class="page-heading"><div><p>STRATEGY LIBRARY</p><h1>Strategies</h1></div><button class="primary" id="assignStrategy">Assign to a bot</button></div>
+    <section class="workspace-grid">
+      <article class="workspace-card featured-card">
+        <span class="badge buy">ACTIVE</span><h2>Multi-Timeframe Momentum</h2>
+        <p>Uses daily and 4-hour regime alignment, 1-hour confirmation, and 15-minute timing.</p>
+        <dl><div><dt>Trend</dt><dd>EMA 12 / EMA 26</dd></div><div><dt>Momentum</dt><dd>RSI 14</dd></div>
+          <div><dt>Volatility</dt><dd>ATR 14 + Bollinger</dd></div><div><dt>Volume</dt><dd>20-period confirmation</dd></div></dl>
+      </article>
+      <article class="workspace-card">
+        <span class="badge buy">ACTIVE</span><h2>AI Grid</h2>
+        <p>Uses a fixed volatility-based range. Downward level crossings buy small slices and each slice targets the next level up.</p>
+        <dl><div><dt>Range</dt><dd>Fixed until stopped</dd></div><div><dt>Controls</dt><dd>Lower, upper, slices</dd></div>
+          <div><dt>Protection</dt><dd>Stop below range</dd></div><div><dt>Best fit</dt><dd>Sideways markets</dd></div></dl>
+      </article>
+      <article class="workspace-card">
+        <span class="badge buy">ACTIVE</span><h2>Adaptive Grid</h2>
+        <p>Uses the same grid execution, but recalculates its volatility range after price leaves it and all prior slices are closed.</p>
+        <dl><div><dt>Range</dt><dd>Safely recenters</dd></div><div><dt>Open slices</dt><dd>Never moved</dd></div>
+          <div><dt>Protection</dt><dd>Stop below range</dd></div><div><dt>Best fit</dt><dd>Changing ranges</dd></div></dl>
+      </article>
+      <article class="workspace-card"><h2>Strategy safety</h2><p>Signals require longer-timeframe confirmation. A weak daily or 4-hour regime caps the final score.</p>
+        <dl><div><dt>Default entry</dt><dd>68 / 100</dd></div><div><dt>Default exit</dt><dd>38 / 100</dd></div>
+          <div><dt>Target</dt><dd>2.5R</dd></div><div><dt>Trailing stop</dt><dd>2 ATR</dd></div></dl></article>
+    </section>
+  </main>
+
+  <main id="view-bots" class="app-view workspace-page hidden">
+    <div class="page-heading"><div><p>AUTOMATION</p><h1>Paper Bots</h1></div><div class="page-actions">
+      <button class="auto-bot-action">✦ Recommended automatic bot</button><button class="primary new-bot-action">＋ Create Paper Bot</button>
+    </div></div>
+    <section class="workspace-card learner-evidence" aria-labelledby="learnerEvidenceTitle">
+      <h2 id="learnerEvidenceTitle">Paper learner evidence</h2>
+      <p class="muted">Shadow simulations use stored candles in chronological order, include configured fees and slippage, and cannot affect live NonKYC bots.</p>
+      <div id="learnerEvidence" aria-live="polite"></div>
+    </section>
+    <section id="botManagement" class="workspace-grid"></section>
+  </main>
+
+  <main id="view-portfolio" class="app-view workspace-page hidden">
+    <div class="page-heading"><div><p>ACCOUNT</p><h1>Portfolio</h1></div></div>
+    <section id="portfolioSummary" class="summary-row"></section>
+    <section class="workspace-card" id="portfolioPositionsCard"><h2>All paper positions</h2><div class="table-wrap">
+      <table><thead><tr><th>Market</th><th>Status</th><th>Entry</th><th>Exit/Current</th><th>Quantity</th><th>Realized P&amp;L</th></tr></thead>
+      <tbody id="portfolioPositions"></tbody></table></div></section>
+
+    <section class="workspace-card" id="liveAccountCard">
+      <div class="live-account-heading">
+        <h2>Your Live Grid Bots (NonKYC, read-only)</h2>
+        <button type="button" id="refreshLiveAccount" data-help="Fetch your real grid bots' fills, booked profit, and unrealized P&amp;L directly from NonKYC.">Refresh</button>
+      </div>
+      <div id="liveAccountBody">
+        <p class="muted">Connect your NonKYC API key in <button type="button" class="linklike" id="goToLiveAccountSettings">Settings</button> to see your real grid bots here, reconstructed from your NonKYC order and trade history. This never places or changes orders.</p>
+      </div>
+    </section>
+  </main>
+
+  <main id="view-backtesting" class="app-view workspace-page hidden">
+    <div class="page-heading"><div><p>RESEARCH</p><h1>Backtesting</h1></div></div>
+    <section class="workspace-grid">
+      <article class="workspace-card"><h2>Historical readiness</h2><p>NonKYC supplies a limited live snapshot. Import historical OHLCV data to test years of market behavior without look-ahead bias.</p>
+        <dl><div><dt>Supported periods</dt><dd>15m, 1h, 4h, 1d</dd></div><div><dt>Modeling</dt><dd>Fees + slippage</dd></div></dl></article>
+      <article class="workspace-card"><h2>Validation pipeline</h2><p>Backtests will use chronological train, validation, and unseen test windows with walk-forward reporting.</p>
+        <span class="badge watch">HISTORY IMPORT REQUIRED</span></article>
+    </section>
+  </main>
+
+  <main id="view-settings" class="app-view workspace-page hidden">
+    <div class="page-heading"><div><p>LOCAL ACCOUNT</p><h1>Settings</h1></div></div>
+    <section class="workspace-grid">
+      <article class="workspace-card"><h2>Profile</h2><dl id="profileSettings"></dl></article>
+      <article class="workspace-card" id="paperDefaultsCard"><h2>Paper execution defaults</h2><dl>
+        <div><dt>Starting cash</dt><dd>$10,000</dd></div><div><dt>Fee model</dt><dd>0.20%</dd></div>
+        <div><dt>Slippage model</dt><dd>0.10%</dd></div><div><dt>Maximum positions</dt><dd>5</dd></div>
+        <div><dt>Deep discovery</dt><dd>Top 20 liquid pairs</dd></div><div><dt>Manual bot universe</dt><dd>All active USDT + USDC pairs</dd></div>
+      </dl></article>
+      <article class="workspace-card" id="liveAccountSettingsCard">
+        <h2>NonKYC API key</h2>
+        <p id="liveAccountStatus" class="muted">Checking connection status…</p>
+        <form id="liveAccountForm" class="live-account-form">
+          <label>API access key<input id="liveAccessKey" type="text" autocomplete="off" maxlength="200" placeholder="Access key" required></label>
+          <label>API secret key<input id="liveSecretKey" type="password" autocomplete="off" maxlength="200" placeholder="Secret key" required></label>
+          <div class="live-account-actions">
+            <button type="submit" class="primary" data-help="Verifies the key against NonKYC, then stores it encrypted only on this PC.">Connect account</button>
+            <button type="button" id="disconnectLiveAccount" class="hidden" data-help="Remove the stored key from this PC. It does not revoke it on NonKYC.">Disconnect</button>
+          </div>
+        </form>
+        <p id="liveAccountFormError" class="form-error hidden"></p>
+        <p class="muted small">The key and secret are encrypted with a key file stored only on this computer and are sent only to NonKYC's API. BitsBots stays read-only with this key until you enable live trading on the <strong>Live Trading</strong> page. To trade, give the key spot-trading permission, keep <strong>withdrawals disabled</strong>, and restrict it to this PC's public IP on NonKYC. Changing or removing the key turns live trading off.</p>
+      </article>
+    </section>
+  </main>
+
+  <main id="view-assistant" class="app-view workspace-page hidden">
+    <div class="page-heading"><div><p>DATA-GROUNDED GUIDANCE</p><h1>Market Assistant</h1></div></div>
+    <section class="assistant-layout">
+      <div class="workspace-card assistant-chat">
+        <div id="assistantMessages" class="assistant-messages">
+          <div class="chat-message assistant-message">Ask about a scanned market, current chart signs, risk, your paper portfolio, or the strongest current setup.</div>
+        </div>
+        <div class="suggested-prompts">
+          <button data-prompt="What is the strongest current setup?">Strongest setup</button>
+          <button data-prompt="Explain the current chart signs for the selected market.">Explain chart signs</button>
+          <button data-prompt="What risks should I consider right now?">Review risk</button>
+          <button data-prompt="Summarize my paper portfolio.">Portfolio summary</button>
+        </div>
+        <form id="assistantForm" class="assistant-form">
+          <div class="assistant-input-wrap"><input id="assistantInput" maxlength="1000" required placeholder="Ask about current market conditions or chart signs..."></div>
+          <button type="submit" class="primary">Send</button>
+        </form>
+      </div>
+      <aside class="workspace-card assistant-context">
+        <h2>Current context</h2><div id="assistantContext"></div>
+        <div class="assistant-disclaimer"><strong>Important</strong><p>This assistant provides suggestions based on current and stored market data. It is not financial advice, does not guarantee outcomes, and may be wrong or become outdated quickly.</p></div>
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="botDialog">
+    <form id="botForm">
+      <div class="dialog-heading"><div><p>NEW AUTOMATION</p><h2>Create Automated Paper Bot</h2></div><button type="button" id="closeBotDialog" class="icon-button">×</button></div>
+      <section class="strategy-picker" aria-label="Choose bot strategy">
+        <button type="button" class="strategy-choice selected" data-strategy="Multi-TF">
+          <span>AI MOMENTUM</span><strong>Momentum Bot</strong>
+          <small>Waits for aligned trend and entry signals.</small>
+        </button>
+        <button type="button" class="strategy-choice" data-strategy="Grid">
+          <span>FIXED RANGE</span><strong>AI Grid Bot</strong>
+          <small>Buys and sells slices inside a sideways range.</small>
+        </button>
+        <button type="button" class="strategy-choice" data-strategy="Adaptive Grid">
+          <span>SMART RANGE</span><strong>Adaptive Grid</strong>
+          <small>Recenters an empty grid when the market leaves its range.</small>
+        </button>
+      </section>
+      <section class="automatic-setup">
+        <h3 id="automaticSetupTitle">Recommended Momentum setup</h3>
+        <p id="automaticSetupDescription">BitsBots will choose the strongest unassigned directional setup and apply conservative paper-trading risk controls.</p>
+        <div id="botRecommendation" class="recommendation-note">Finding the strongest current candidate...</div>
+        <button type="button" id="createRecommendedBot" class="primary">Create recommended paper bot</button>
+      </section>
+      <button type="button" id="showCustomBot" class="custom-toggle">Customize market or settings</button>
+      <div id="customBotFields" class="hidden">
+        <input id="botStrategy" type="hidden" value="Multi-TF">
+        <label>Bot name<input id="botName" maxlength="60" required placeholder="Momentum Scout"><small>A private name used to recognize this bot.</small></label>
+        <label>Market
+          <input id="botMarketSearch" placeholder="Search all NonKYC USDT/USDC pairs, for example BTC">
+          <select id="botSymbol" required></select>
+          <small>The coin pair this bot will watch. Auto-pick changes this field to the strongest current unassigned candidate.</small>
+        </label>
+        <div id="marketSelectionNote" class="market-selection-note"></div>
+        <div class="form-row">
+          <label>Risk level<select id="botRisk"><option value="low">Low · 0.25%</option><option value="medium" selected>Medium · 0.50%</option><option value="high">High · 1.00%</option></select>
+            <small>The approximate portion of paper equity at risk if the stop is reached.</small></label>
+          <label id="momentumEntrySetting">Entry score<input id="botEntryScore" type="number" min="50" max="95" value="68" required>
+            <small>Minimum setup quality from 0–100. Use 68 for balanced filtering; higher is stricter and trades less often.</small></label>
+        </div>
+        <section id="gridSettings" class="grid-settings hidden">
+          <div class="form-row">
+            <label>Lower price<input id="botLowerPrice" type="number" min="0" step="any">
+              <small>The bottom of the trading range.</small></label>
+            <label>Upper price<input id="botUpperPrice" type="number" min="0" step="any">
+              <small>The top of the trading range.</small></label>
+          </div>
+          <div class="form-row">
+            <label>Grid slices<input id="botGridSlices" type="number" min="3" max="30" value="8">
+              <small>More slices create tighter, smaller trades. Fees limit useful spacing.</small></label>
+            <label>Stop below range<input id="botGridStop" type="number" min="0" step="any">
+              <small>Closes filled slices if price breaks below this level.</small></label>
+          </div>
+          <div id="gridEstimate" class="grid-estimate">Choose a market to calculate grid spacing.</div>
+        </section>
+        <label>Maximum allocation <span id="allocationLabel">10%</span><input id="botAllocation" type="range" min="1" max="50" value="10">
+          <small id="allocationHelp">The most paper equity this bot may place in one position.</small></label>
+        <button type="button" id="autoGenerateBot" class="auto-button">↻ Refill with the strongest current candidate</button>
+        <p id="botModeNote" class="dialog-note">Paper mode only. The bot may open simulated positions only when its score reaches the entry threshold.</p>
+        <button type="submit" id="customCreateBot" class="primary">Create Momentum Bot</button>
+      </div>
+      <p id="botFormError" class="errors"></p>
+    </form>
+  </dialog>
+
+  <main id="view-live" class="app-view workspace-page hidden">
+    <div class="page-heading"><div><p>EXECUTION</p><h1>Live Trading</h1></div><div class="page-actions">
+      <span id="liveModeBanner" class="mode-banner">LIVE TRADING OFF</span>
+      <button type="button" id="killSwitchButton" class="danger-button" data-help="Blocks every new BitsBots order and halts all BitsBots bots immediately. Turning it off requires your password.">Engage kill switch</button>
+      <button type="button" id="emergencyCancelButton" class="danger-button" data-help="Engages the kill switch, halts bots, and cancels every open order BitsBots created. It never cancels other orders on your account, such as native NonKYC grid bots.">Emergency cancel</button>
+    </div></div>
+    <div class="live-banner">
+      <strong>BitsBots runs these bots on this PC.</strong>
+      They only trade while BitsBots is running, this PC is awake, and the internet is connected. NonKYC has no native bot API or test environment, so use <strong>Dry run</strong> to rehearse with real prices and simulated funds. Paper bots are separate and never trade.
+    </div>
+    <p id="liveError" class="form-error hidden" role="alert"></p>
+
+    <section class="workspace-grid">
+      <article class="workspace-card">
+        <h2>Status</h2>
+        <dl id="liveStatusList"></dl>
+      </article>
+
+      <article class="workspace-card" id="liveEnableCard">
+        <h2>Enable live trading</h2>
+        <div id="liveEnabledView" class="hidden">
+          <p>Live trading is <strong class="negative">ON</strong>. Real orders can be placed after each confirmation.</p>
+          <label class="live-field">Expected public IP<input id="liveIpReconfirm" autocomplete="off" maxlength="64" data-help="If your internet provider changes your public IP, update the API key's allowlist on NonKYC first, then reconfirm the new address here."></label>
+          <div class="live-account-actions">
+            <button type="button" id="liveIpReconfirmButton" class="primary">Reconfirm IP</button>
+            <button type="button" id="liveDisableButton">Turn live trading off</button>
+          </div>
+          <p id="liveEnabledFeedback" class="live-feedback hidden" role="status" aria-live="polite"></p>
+        </div>
+        <form id="liveEnableForm">
+          <p class="muted">Live trading is off. Complete every step to turn it on. Nothing starts automatically.</p>
+          <label class="live-field">This PC's public IP address
+            <input id="liveIpAddress" autocomplete="off" maxlength="64" placeholder="e.g. 203.0.113.25" required data-help="The address NonKYC sees, not a local 192.168.x.x or 10.x.x.x address. Find it yourself (for example in your router's status page) and add it to the API key's IP allowlist on NonKYC. BitsBots never looks it up online.">
+            <small>Enter it manually. BitsBots does not contact any IP lookup service.</small></label>
+          <label class="check-row"><input type="checkbox" id="liveConfirmTrade"> The API key has spot-trading permission.</label>
+          <label class="check-row"><input type="checkbox" id="liveConfirmWithdraw"> Withdrawals are <strong>disabled</strong> on this API key.</label>
+          <label class="check-row"><input type="checkbox" id="liveConfirmIp"> I added the IP above to this key's allowlist on NonKYC.</label>
+          <label class="check-row"><input type="checkbox" id="liveConfirmRisk"> I understand BitsBots is beta software, offers no guarantee of profit, and can lose the funds I assign to it.</label>
+          <label class="live-field">Type <code>ENABLE LIVE TRADING</code><input id="liveTypedPhrase" autocomplete="off" maxlength="64" required></label>
+          <label class="live-field">Your BitsBots password<input id="liveEnablePassword" type="password" autocomplete="current-password" required></label>
+          <button type="submit" id="liveEnableSubmit" class="primary">Enable live trading</button>
+          <p id="liveEnableFeedback" class="live-feedback hidden" role="status" aria-live="polite"></p>
+          <p class="muted small">These confirmations are recorded as <em>confirmed by you</em>. BitsBots cannot see your key's permissions or allowlist settings on NonKYC.</p>
+        </form>
+      </article>
+
+      <article class="workspace-card">
+        <h2>Risk limits</h2>
+        <p class="muted small">Apply to both dry run and live. Every order is checked against these before it can be sent. Hover any field for details.</p>
+        <form id="liveLimitsForm" class="limits-grid"></form>
+      </article>
+
+      <article class="workspace-card">
+        <h2>Manual order</h2>
+        <p class="muted small ticket-note">A single, one-time buy or sell that you place yourself. It is <strong>not a bot</strong>: once it fills, nothing else happens automatically. To trade repeatedly, use <strong>＋ New grid bot</strong> below.</p>
+        <form id="orderTicket" class="ticket-grid">
+          <label class="live-field">Mode
+            <select id="ticketMode" data-help="Dry run simulates the order with real prices and practice balances. Live sends a real order to NonKYC.">
+              <option value="dry_run">Dry run (simulated)</option>
+              <option value="live">LIVE (real funds)</option>
+            </select></label>
+          <label class="live-field">Market<input id="ticketSymbol" list="liveMarketList" autocomplete="off" placeholder="BTC/USDT" required data-help="Only COIN/USDT and COIN/USDC markets can be traded."></label>
+          <label class="live-field">Side
+            <select id="ticketSide"><option value="buy">Buy</option><option value="sell">Sell</option></select></label>
+          <label class="live-field">Limit price<input id="ticketPrice" inputmode="decimal" autocomplete="off" required data-help="BitsBots places limit orders only. Values are rounded down to the market's precision and shown before you confirm."></label>
+          <label class="live-field">Quantity<input id="ticketQuantity" inputmode="decimal" autocomplete="off" required data-help="Amount of the coin to buy or sell."></label>
+          <button type="submit" class="primary">Preview order</button>
+        </form>
+        <datalist id="liveMarketList"></datalist>
+        <p class="muted small">A preview never places an order. It expires after 60 seconds.</p>
+      </article>
+    </section>
+
+    <section class="workspace-card live-section">
+      <div class="live-section-heading"><h2>Grid bots</h2>
+        <button type="button" id="newGridBot" class="primary" data-help="Design a grid, review every order it would place, then create it in an armed state. Nothing trades until you start it.">＋ New grid bot</button></div>
+      <div id="liveBotList" class="live-bot-list"></div>
+    </section>
+
+    <section class="workspace-card live-section">
+      <div class="live-section-heading"><h2>BitsBots orders</h2>
+        <select id="orderModeFilter" aria-label="Filter orders by mode">
+          <option value="">All modes</option><option value="dry_run">Dry run</option><option value="live">Live</option>
+        </select></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Time</th><th>Mode</th><th>Source</th><th>Market</th><th>Side</th><th>Price</th><th>Qty</th><th>Filled</th><th>State</th><th></th></tr></thead>
+        <tbody id="liveOrderRows"></tbody>
+      </table></div>
+      <p class="muted small">Click any order for its full details and history.</p>
+    </section>
+  </main>
+
+  <dialog id="orderPreviewDialog" aria-labelledby="orderPreviewTitle">
+    <form method="dialog" id="orderPreviewForm">
+      <div class="dialog-heading"><div><p>REVIEW BEFORE SENDING</p><h2 id="orderPreviewTitle">Order preview</h2></div>
+        <button type="button" class="icon-button" data-close-dialog aria-label="Close preview">×</button></div>
+      <div id="orderPreviewBody"></div>
+      <label id="orderPreviewPasswordRow" class="hidden">Your BitsBots password (required for live orders)
+        <input id="orderPreviewPassword" type="password" autocomplete="current-password"></label>
+      <p id="orderPreviewError" class="form-error hidden" role="alert"></p>
+      <button type="button" id="orderPreviewConfirm" class="primary">Confirm order</button>
+    </form>
+  </dialog>
+
+  <dialog id="gridDialog" aria-labelledby="gridDialogTitle">
+    <form id="gridForm">
+      <div class="dialog-heading"><div><p>BITSBOTS-HOSTED GRID</p><h2 id="gridDialogTitle">New grid bot</h2></div>
+        <button type="button" class="icon-button" data-close-dialog aria-label="Close grid designer">×</button></div>
+      <div class="form-row">
+        <label>Mode<select id="gridMode" data-help="Dry run rehearses the grid with real prices and practice balances. Live places real orders.">
+          <option value="dry_run">Dry run (simulated)</option><option value="live">LIVE (real funds)</option></select></label>
+        <label>Name<input id="gridName" maxlength="60" placeholder="Optional"></label>
+      </div>
+      <label>Market<input id="gridSymbol" list="liveMarketList" autocomplete="off" required placeholder="BTC/USDT" data-help="Only COIN/USDT and COIN/USDC markets can be traded. Picking a market fills every field with suggested values."></label>
+      <button type="button" id="gridSuggestButton" class="grid-suggest-button" data-help="Fill every field with suggestions based on the current price, the last 3 days of trading, your balance, and your risk limits. Replaces values you typed.">↻ Fill suggested values from the current market</button>
+      <div id="gridSuggestNote" class="grid-suggest-note hidden" role="status" aria-live="polite"></div>
+      <div class="form-row">
+        <label>Lower price<input id="gridLower" inputmode="decimal" required data-help="Lowest grid line. Must be below the current price."></label>
+        <label>Upper price<input id="gridUpper" inputmode="decimal" required data-help="Highest grid line. Must be above the current price."></label>
+      </div>
+      <div class="form-row">
+        <label>Grid lines<input id="gridLevels" type="number" min="3" max="50" value="8" required data-help="Number of evenly spaced price lines. Each slot buys at one line and sells one line higher. Spacing must cover round-trip fees."></label>
+        <label>Order value per line<input id="gridOrderValue" inputmode="decimal" required data-help="USDT/USDC spent by each buy. Must be at least NonKYC's minimum order value and within your per-order limit."></label>
+      </div>
+      <div class="form-row">
+        <label>Maximum allocation<input id="gridAllocation" inputmode="decimal" required data-help="The most this bot may commit at once, counting open buys plus coins it holds at cost. Buys pause when reached; Trailing Up never exceeds it."></label>
+        <label>Stop loss<input id="gridStop" inputmode="decimal" required data-help="If price falls to this level the bot cancels its orders and sells its holdings, then stops. Fast moves can fill below this price."></label>
+      </div>
+      <label class="check-row"><input type="checkbox" id="gridTrailing"> Enable Trailing Up
+        <small>When price stays above the grid, move the whole grid up. Holdings keep their sell targets and the stop only moves up.</small></label>
+      <div id="gridTrailingFields" class="hidden">
+        <div class="form-row">
+          <label>Trigger above upper (%)<input id="gridTrailTrigger" inputmode="decimal" value="1" data-help="How far above the upper price the market must move before Trailing Up is considered."></label>
+          <label>Confirmation time (seconds)<input id="gridTrailConfirm" type="number" min="60" max="86400" value="300" data-help="Price must stay above the trigger this long before the grid moves, to avoid chasing brief spikes."></label>
+        </div>
+        <div class="form-row">
+          <label>Maximum recenters<input id="gridTrailMax" type="number" min="1" max="20" value="3" data-help="How many times the grid may move up before the bot pauses."></label>
+          <label>Trailing ceiling<input id="gridTrailCeiling" inputmode="decimal" data-help="The highest the upper price may ever move. When reached, the bot pauses instead of following the market further."></label>
+        </div>
+      </div>
+      <button type="button" id="gridPreviewButton">Preview grid</button>
+      <div id="gridPlan"></div>
+      <p id="gridError" class="form-error hidden" role="alert"></p>
+      <button type="submit" id="gridCreateButton" class="primary" disabled>Create bot (armed, not started)</button>
+    </form>
+  </dialog>
+
+  <dialog id="orderDetailDialog" aria-labelledby="orderDetailTitle">
+    <div class="dialog-heading"><div><p id="orderDetailKicker">ORDER DETAILS</p><h2 id="orderDetailTitle">Order</h2></div>
+      <button type="button" class="icon-button" data-close-dialog aria-label="Close order details">×</button></div>
+    <div id="orderDetailBody"></div>
+    <div class="order-detail-actions">
+      <button type="button" id="orderDetailChart" class="primary">Show on Dashboard chart</button>
+    </div>
+  </dialog>
+
+  <dialog id="passwordDialog" aria-labelledby="passwordDialogTitle">
+    <form method="dialog" id="passwordForm">
+      <div class="dialog-heading"><div><p>CONFIRM</p><h2 id="passwordDialogTitle">Enter your password</h2></div>
+        <button type="button" class="icon-button" data-close-dialog aria-label="Cancel">×</button></div>
+      <p id="passwordDialogMessage"></p>
+      <label>Your BitsBots password<input id="passwordDialogInput" type="password" autocomplete="current-password"></label>
+      <button type="submit" value="ok" class="primary">Confirm</button>
+    </form>
+  </dialog>
+
+  <dialog id="riskNoticeDialog" aria-labelledby="riskNoticeTitle" aria-describedby="riskNoticeBody">
+    <div class="dialog-heading"><div><p>PLEASE READ</p><h2 id="riskNoticeTitle">BitsBots Live Trading Beta — Use at Your Own Risk</h2></div>
+      <button type="button" class="icon-button" id="riskNoticeClose" aria-label="Close notice">×</button></div>
+    <div id="riskNoticeBody" class="risk-notice">
+      <p>BitsBots does not guarantee financial success or profits. Automated trading can lose some or all of the funds assigned to it. BitsBots is currently in beta testing and may contain errors, experience outages, or behave unexpectedly.</p>
+      <p>Use it at your own risk and trade only with funds you can afford to lose. Research, signals, market analysis, and AI-generated content in BitsBots are provided for informational purposes only and are not financial advice.</p>
+      <p>You are responsible for reviewing bot settings, exchange permissions, orders, risk limits, and trading activity.</p>
+    </div>
+    <button type="button" id="riskNoticeAccept" class="primary">I understand</button>
+  </dialog>
+  <script src="/static/app.js?v=20261002-1"></script>
+  <script src="/static/live.js?v=20261002-1"></script>
+</body>
+</html>
